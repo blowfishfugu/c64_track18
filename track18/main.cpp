@@ -10,18 +10,18 @@
 
 	
 
-void scanFile(const fs::path& filename) {
-	std::println(std::cout, "Processing: {}", filename.string());
+void scanFile(std::uintmax_t filesize, const fs::path& filename) {
+	std::println(std::cout, "Processing: {} ({})", filename.string(),filesize);
 }
 
 
 
 int main(int argc, char* argv[]) {
 	auto args = std::span{ argv,static_cast<size_t>(argc) };
-	std::vector<fs::path> inputs = getInputs(args);
+	auto inputs = getInputs<std::tuple<std::uintmax_t,fs::path>>(args);
 	
-	for (const auto& filename : inputs) {
-		scanFile(filename);
+	for (const auto& [filesize,filename] : inputs) {
+		scanFile(filesize,filename);
 	}
 
 	return 0;

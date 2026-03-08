@@ -2,6 +2,7 @@
 #include <vector>
 #include <filesystem>
 #include <list>
+#include <tuple>
 
 namespace fs = std::filesystem;
 
@@ -16,8 +17,9 @@ auto isD64 = [](const fs::path& filename)->bool {
 	};
 
 //todo: dies als coro?
-std::vector<fs::path> getInputs(auto&& args) {
-	std::vector<fs::path> inputs;
+template<typename RType>
+std::vector<RType> getInputs(auto&& args) {
+	std::vector<std::tuple<std::uintmax_t,fs::path>> inputs;
 	std::list<fs::path> subDirs;
 	std::error_code ec{};
 	for (size_t i{}; const fs::path p : args) {
@@ -33,7 +35,8 @@ std::vector<fs::path> getInputs(auto&& args) {
 			subDirs.emplace_back(resolved);
 		}
 		else if (isD64(resolved)) {
-			inputs.emplace_back(resolved); //co_yield
+			auto sz=fs::file_size(resolved);
+			inputs.emplace_back(sz, resolved); //co_yield
 		}
 	}
 
@@ -48,7 +51,7 @@ std::vector<fs::path> getInputs(auto&& args) {
 					subDirs.emplace_back(pathEntry);
 				}
 				else if (isD64(pathEntry)) {
-					inputs.emplace_back(pathEntry); //co_yield
+					inputs.emplace_back(entry.file_size(), pathEntry); //co_yield
 				}
 			}
 		}
