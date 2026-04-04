@@ -6,10 +6,18 @@
 
 namespace fs = std::filesystem;
 
+auto isError = [](const std::error_code& ec) {
+	if (ec) {
+		std::println(std::cerr, "{}", ec.message());
+		return true;
+	}
+	return false;
+	};
+
 auto isD64 = [](const fs::path& filename)->bool {
 	std::error_code ec{};
 	if (!fs::is_regular_file(filename, ec)) { return false; }
-	if (ec) { return false; }
+	if (isError(ec)) { return false; }
 
 	std::string ext = filename.extension().string();
 	if (ext == ".d64" || ext == ".D64") { return true; }
@@ -17,9 +25,9 @@ auto isD64 = [](const fs::path& filename)->bool {
 	};
 
 //todo: dies als coro?
-template<typename RType>
+template<typename RType= std::tuple<std::uintmax_t, fs::path> >
 std::vector<RType> getInputs(auto&& args) {
-	std::vector<std::tuple<std::uintmax_t,fs::path>> inputs;
+	std::vector<RType> inputs;
 	std::list<fs::path> subDirs;
 	std::error_code ec{};
 	for (size_t i{}; const fs::path p : args) {
@@ -27,9 +35,11 @@ std::vector<RType> getInputs(auto&& args) {
 		if (i == 1) { continue; }
 
 		fs::path resolved = fs::absolute(p, ec);
-		if (ec) { continue; }
+		if (isError(ec)) { continue; }
 
 		if (!fs::exists(resolved, ec)) { continue; }
+		if (isError(ec)) { continue; }
+
 
 		if (fs::is_directory(resolved, ec)) {
 			subDirs.emplace_back(resolved);
@@ -47,7 +57,7 @@ std::vector<RType> getInputs(auto&& args) {
 		{
 			for (auto&& entry : fs::directory_iterator(resolved)) {
 				fs::path pathEntry = entry.path();
-				if (fs::is_directory(pathEntry)) {
+				if (fs::is_directory(pathEntry, ec)) {
 					subDirs.emplace_back(pathEntry);
 				}
 				else if (isD64(pathEntry)) {
