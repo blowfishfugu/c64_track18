@@ -2,7 +2,7 @@
 <Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LocalDebuggerCommandArguments>..\</LocalDebuggerCommandArguments>
-    <LocalDebuggerCommandArgumentsHistory>..\|</LocalDebuggerCommandArgumentsHistory>
+    <LocalDebuggerCommandArguments>C:\Games\c64\disks\skate_or_die</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArgumentsHistory>..\|C:\Games\c64\disks\skate_or_die|</LocalDebuggerCommandArgumentsHistory>
   </PropertyGroup>
 </Project>
