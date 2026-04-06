@@ -9,6 +9,7 @@
 #include <map>
 #include <fstream>
 #include <array>
+#include <bitset>
 #include "parseArgs.h"
 
 struct DiskType {
@@ -44,11 +45,31 @@ consteval size_t bytesOf(int from, int to) {
 	return static_cast<size_t>(to) - from + 0x01;
 }
 
+struct BAMTrack {
+	std::byte FreeSectors{};
+	std::array<std::byte,3> mask{};
+};
+
+std::string interpretBamTrack(const BAMTrack& trackInfo) {
+	std::string bits(24ull,'\0');
+	int sector = 0;
+	for (const std::byte& b : trackInfo.mask) {
+		int current{ (int)b };
+		for( int i=0;i<8;++i){
+			bits[sector] = (current & 0x01)+'0';
+			++sector;
+			current >>= 1;
+		}
+	}
+	
+	return std::format("Free: {:0>3}, {}", static_cast<int>(trackInfo.FreeSectors), bits);
+}
+
 struct BAMSector {
 	std::array<std::byte, bytesOf(0x00, 0x01)> nextDirLocationTS{}; //Track/Sector location of the first directory sector (should	be set to 18 / 1 but it doesn't matter, and don't trust  what		is there, always go to 18 / 1 for first directory entry)
 	std::byte DiskDOSVersionType{}; //Disk DOS version type $41("A"), or $00, anything else leads to "soft write protection" (error code 73).
 	std::byte unused{};
-	std::array<std::byte, bytesOf(0x04, 0x8F)> BAMEntries{}; //BAM entries for each track, in groups  of  four  bytes  per	track, starting on track 1 (see below for more details)
+	std::array<BAMTrack, 35> BAMEntries{}; //BAM entries for each track, in groups  of  four  bytes  per	track, starting on track 1 (see below for more details)
 	std::array<std::byte, bytesOf(0x90, 0x9F)> DiskName{}; //Disk Name (padded with $A0)
 	std::array<std::byte, bytesOf(0xA0, 0xA1)> _padA0{}; //Filled with $A0
 	std::array<std::byte, bytesOf(0xA2, 0xA3)> DiskID{}; //Disk ID
@@ -100,6 +121,14 @@ void scanFile(std::uintmax_t filesize, const fs::path& filename) {
 
 		auto diskName = petToAscii( directory.BAM.DiskName );
 		std::cout << "DISKNAME: " << diskName << "\n";
+		std::println(std::cout, "                    :          11111111112222");
+		std::println(std::cout, "                    :012345678901234567890123");
+		std::println(std::cout, "                    :------------------------");
+		for (int trackID = 1; const BAMTrack& trackInfo : directory.BAM.BAMEntries) {
+			std::println(std::cout, "Track {:0>2}: {}", trackID, interpretBamTrack(trackInfo) );
+			++trackID;
+		}
+
 		for (const DirEntry& entry : directory.direntries) {
 			/*
 			02: File type.
