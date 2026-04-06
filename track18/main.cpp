@@ -40,15 +40,51 @@ struct DirEntry {
 
 static_assert(sizeof(DirEntry) == 32);
 
+consteval size_t bytesOf(int from, int to) {
+	return static_cast<size_t>(to) - from + 0x01;
+}
+
+struct BAMSector {
+	std::array<std::byte, bytesOf(0x00, 0x01)> nextDirLocationTS{}; //Track/Sector location of the first directory sector (should	be set to 18 / 1 but it doesn't matter, and don't trust  what		is there, always go to 18 / 1 for first directory entry)
+	std::byte DiskDOSVersionType{}; //Disk DOS version type $41("A"), or $00, anything else leads to "soft write protection" (error code 73).
+	std::byte unused{};
+	std::array<std::byte, bytesOf(0x04, 0x8F)> BAMEntries{}; //BAM entries for each track, in groups  of  four  bytes  per	track, starting on track 1 (see below for more details)
+	std::array<std::byte, bytesOf(0x90, 0x9F)> DiskName{}; //Disk Name (padded with $A0)
+	std::array<std::byte, bytesOf(0xA0, 0xA1)> _padA0{}; //Filled with $A0
+	std::array<std::byte, bytesOf(0xA2, 0xA3)> DiskID{}; //Disk ID
+	std::byte _padA4{}; //Usually $A0
+	std::array<std::byte, bytesOf(0xA5, 0xA6)> DOSType{}; //DOS type, usually "2A"
+	std::array<std::byte, bytesOf(0xA7, 0xAA)> _padA7{}; //Filled with $A0
+	std::array<std::byte, bytesOf(0xAB, 0xFF)> SpecialBams{}; //Normally unused ($00), except for 40 track extended format, see the following two entries:
+	//std::array<std::byte, bytesOf(0xAC,0xBF)  ; //DOLPHIN DOS track 36-40 BAM entries (only for 40 track)
+	//std::array<std::byte, bytesOf(0xC0,0xD3)  ; //SPEED DOS track 36-40 BAM entries (only for 40 track)
+	//std::array<std::byte, bytesOf(0xD4,0xFF)  ; //always unused
+};
+
+static_assert(sizeof(BAMSector) == 256); //sizeof(sector)
+
 /// <summary>
 /// Track18 has 19 sectors,
-/// first is the BAM (BlockAvaliablityMap)
+/// first is the BAM (BlockAvailablityMap)
 /// further 18 sectors are DirectoryEntries, each 32Byte.
 /// </summary>
 struct Track18 {
-	sector BAM{}; //256
-	std::array<DirEntry, 18*(sizeof(sector)/sizeof(DirEntry))> direntries{}; //144 entries
+	BAMSector BAM{}; //256
+	std::array<DirEntry, 18*(sizeof(sector))/sizeof(DirEntry)> direntries{}; //144 entries
 };
+
+template<size_t arraySize>
+auto petToAscii(const std::array<std::byte,arraySize>& byteArray) {
+	//WIP: currently just removing the padding, might return a string-copy some day?
+	auto trim = [](std::string_view& v) {
+		while (!v.empty() && v.starts_with(static_cast<char>(0xA0))) { v.remove_prefix(1ull); }
+		while (!v.empty() && v.ends_with(static_cast<char>(0xA0))) { v.remove_suffix(1ull); }
+		};
+
+	std::string_view fileName{ (const char*)byteArray.data() , (const char*)(byteArray.data() + byteArray.size()) };
+	trim(fileName);
+	return fileName;
+}
 
 void scanFile(std::uintmax_t filesize, const fs::path& filename) {
 	std::println(std::cout, "Processing: {} ({})", filename.string(),filesize);
@@ -62,6 +98,8 @@ void scanFile(std::uintmax_t filesize, const fs::path& filename) {
 		ifs.read((char*)&directory, sizeof(Track18));
 		ifs.close();
 
+		auto diskName = petToAscii( directory.BAM.DiskName );
+		std::cout << "DISKNAME: " << diskName << "\n";
 		for (const DirEntry& entry : directory.direntries) {
 			/*
 			02: File type.
@@ -75,20 +113,14 @@ void scanFile(std::uintmax_t filesize, const fs::path& filename) {
 			*/
 			if ((entry.filetype & std::byte{ 0x80 }) == std::byte{ 0x80 })
 			{
-				auto removePadding=[](std::string_view & v) {
-					while (!v.empty() && v.starts_with(0xA0)) { v.remove_prefix(1ull); }
-					while (!v.empty() && v.ends_with(0xA0)) { v.remove_suffix(1ull); }
-				};
-
-				std::string_view fileName{ (char*)entry.fileName.data() , (char*)entry.fileName.data() + entry.fileName.size() };
-				removePadding(fileName);
-				std::cout << fileName << "\n";
+				auto fileName = petToAscii(entry.fileName);
+				std::println( std::cout, "\"{:<16}\"", fileName );
 			}
 		}
 
 		return;
 	}
-	std::println(std::cout, "unknown disksize {}", filesize);
+	std::cout << "unknown disksize "<< filesize<< "\n";
 	return;
 }
 
