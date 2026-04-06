@@ -2,14 +2,12 @@
 #include <string>
 #include <string_view>
 #include <print>
-#include <ranges>
 #include <filesystem>
 #include <span>
 #include <vector>
 #include <map>
 #include <fstream>
 #include <array>
-#include <bitset>
 #include "parseArgs.h"
 
 struct DiskType {
@@ -51,7 +49,7 @@ struct BAMTrack {
 };
 
 std::string interpretBamTrack(const BAMTrack& trackInfo) {
-	std::string bits(24ull,'\0');
+	std::string bits(24ull,'\0'); //<- alternative: use std::bitset
 	int sector = 0;
 	for (const std::byte& b : trackInfo.mask) {
 		int current{ (int)b };
@@ -129,8 +127,8 @@ void scanFile(std::uintmax_t filesize, const fs::path& filename) {
 			++trackID;
 		}
 
-		for (const DirEntry& entry : directory.direntries) {
-			/*
+		for (const DirEntry& entry : directory.direntries) { //Todo: follow T/S-Chain
+			/* Todo: print filetype, and filesize
 			02: File type.
                  Typical values for this location are:
                    $00 - Scratched (deleted file entry)
