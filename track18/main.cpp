@@ -37,6 +37,43 @@ struct DirEntry {
 	std::array<std::byte,2> filesize{};
 };
 
+std::string stringifyFileType(const DirEntry& dirInfo) {
+	const std::byte& filebits = dirInfo.filetype;
+	const int inspect = static_cast<int>(~filebits);
+	if ((inspect & 0b0000'0111) == 0b0000'0111) { //80 DEL
+		return "DEL";
+	}
+	else if ((inspect & 0b0000'0111) == 0b0000'0110) { //81 SEQ
+		return "SEQ";
+	}
+	else if ((inspect & 0b0000'0111) == 0b0000'0101) { //82 PRG
+		return "PRG";
+	}
+	else if ((inspect & 0b0000'0111) == 0b0000'0100) { //83 USR
+		return "USR";
+	}
+	else if ((inspect & 0b0000'0111) == 0b0000'0011) { //84 REL
+		return "REL";
+	}
+	return "";
+}
+
+std::string stringifyLockFlags(const DirEntry& dirInfo) {
+	std::string specialFlags{};
+	const std::byte& filebits = dirInfo.filetype;
+	const int inspect = static_cast<int>(filebits);
+	if ((inspect & 0b0010'0000) == 0b0010'0000) { //SAVE-@
+		specialFlags.push_back('@');
+	}
+	if ((inspect & 0b0100'0000) == 0b0100'0000) { //locked flag
+		specialFlags.push_back('>');
+	}
+	if ((inspect & 0b1000'0000) == 0b0100'0000) { //closed flag
+		specialFlags.push_back('*');
+	}
+	return specialFlags;
+}
+
 static_assert(sizeof(DirEntry) == 32);
 
 consteval size_t bytesOf(int from, int to) {
@@ -48,7 +85,7 @@ struct BAMTrack {
 	std::array<std::byte,3> mask{};
 };
 
-std::string interpretBamTrack(const BAMTrack& trackInfo) {
+std::string stringifyBamTrack(const BAMTrack& trackInfo) {
 	std::string bits(24ull,'\0'); //<- alternative: use std::bitset
 	int sector = 0;
 	for (const std::byte& b : trackInfo.mask) {
@@ -123,26 +160,23 @@ void scanFile(std::uintmax_t filesize, const fs::path& filename) {
 		std::println(std::cout, "                    :012345678901234567890123");
 		std::println(std::cout, "                    :------------------------");
 		for (int trackID = 1; const BAMTrack& trackInfo : directory.BAM.BAMEntries) {
-			std::println(std::cout, "Track {:0>2}: {}", trackID, interpretBamTrack(trackInfo) );
+			std::println(std::cout, "Track {:0>2}: {}", trackID, stringifyBamTrack(trackInfo) );
 			++trackID;
 		}
 
-		for (const DirEntry& entry : directory.direntries) { //Todo: follow T/S-Chain
-			/* Todo: print filetype, and filesize
-			02: File type.
-                 Typical values for this location are:
-                   $00 - Scratched (deleted file entry)
-                    80 - DEL
-                    81 - SEQ
-                    82 - PRG
-                    83 - USR
-                    84 - REL
-			*/
+		for (int current = 1; const DirEntry& entry : directory.direntries) { //Todo: follow T/S-Chain
+			
 			if ((entry.filetype & std::byte{ 0x80 }) == std::byte{ 0x80 })
 			{
 				auto fileName = petToAscii(entry.fileName);
-				std::println( std::cout, "\"{:<16}\"", fileName );
+				auto fileType = stringifyFileType(entry);
+				auto fileLocks = stringifyLockFlags(entry);
+				std::println( std::cout, "{:0>3d}: ?{:0>2d}/{:0>2d}? \"{:<16}\" {}{}",
+					current,
+					(int)std::get<0>(entry.nextDirLocationTS),(int)std::get<1>(entry.nextDirLocationTS)
+					, fileName, fileLocks, fileType);
 			}
+			++current;
 		}
 
 		return;
