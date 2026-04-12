@@ -39,26 +39,35 @@ struct FileEntry {
 	std::array<u8,2> filesize{};
 };
 
-enum class FileTypes : std::uint8_t {
-
+enum class FileTypes : u8 {
+	DEL = 0b000U,
+	SEQ = 0b001U,
+	PRG = 0b010U,
+	USR = 0b011U,
+	REL = 0b100U,
+	Unknown=0xFFU
 };
+
+constexpr u8 inv3(u8 ft) {
+	return ~ft & 0b0000'0111;
+}
 
 std::string stringifyFileType(const FileEntry& dirInfo) {
 	const std::uint8_t& filebits = dirInfo.filetype;
-	const std::uint8_t inspect = (~filebits) & 0b0000'0111; //only looking at last3 bits
-	if (inspect == 0b0000'0111) { //8'0 DEL
+	const std::uint8_t inspect = inv3(filebits); //only looking at last3 bits
+	if (inspect == inv3((u8)FileTypes::DEL) ) { //8'0 DEL
 		return "DEL";
 	}
-	else if (inspect == 0b0000'0110) { //8'1 SEQ
+	else if (inspect == inv3((u8)FileTypes::SEQ)) { //8'1 SEQ
 		return "SEQ";
 	}
-	else if (inspect == 0b0000'0101) { //8'2 PRG
+	else if (inspect == inv3((u8)FileTypes::PRG)) { //8'2 PRG
 		return "PRG";
 	}
-	else if (inspect == 0b0000'0100) { //8'3 USR
+	else if (inspect == inv3((u8)FileTypes::USR)) { //8'3 USR
 		return "USR";
 	}
-	else if (inspect == 0b0000'0011) { //8'4 REL
+	else if (inspect == inv3((u8)FileTypes::REL)) { //8'4 REL
 		return "REL";
 	}
 	return "";
@@ -178,10 +187,10 @@ void scanFile(std::uintmax_t filesize, const fs::path& filename) {
 		for (int entryPos = 0;
 			const FileEntry& entry : directory.fileEntries) { //Todo: follow T/S-Chain
 			
-			if ((entry.filetype & u8{ 0x80 }) == u8{ 0x80 })
+			auto fileType = stringifyFileType(entry);
+			if (fileType.size()>0)
 			{
 				auto fileName = petToAscii(entry.fileName);
-				auto fileType = stringifyFileType(entry);
 				auto fileLocks = stringifyLockFlags(entry);
 				std::println( std::cout, "{:0>3x}: ?{:0>2x}/{:0>2x}? \"{:<16}\" {}{}",
 					entryPos,
