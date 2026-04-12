@@ -3,6 +3,6 @@
   <PropertyGroup />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LocalDebuggerCommandArguments>..\</LocalDebuggerCommandArguments>
-    <LocalDebuggerCommandArgumentsHistory>C:\Games\c64\disks\skate_or_die|..\|</LocalDebuggerCommandArgumentsHistory>
+    <LocalDebuggerCommandArgumentsHistory>C:\Games\c64\disks\skate_or_die|..\Magic Disk\1987\12-1987|"..\Magic Disk\1987\12-1987"|..\|</LocalDebuggerCommandArgumentsHistory>
   </PropertyGroup>
 </Project>
