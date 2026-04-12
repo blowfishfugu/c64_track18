@@ -55,6 +55,7 @@ Debug
 **/packages/*
 *.zip
 **/Magic Disk/*
+**/Game On/*
 
 # keeping images out
 *.d64
