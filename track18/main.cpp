@@ -137,7 +137,6 @@ struct BAMSector {
 
 static_assert(sizeof(BAMSector) == 256); //sizeof(sector)
 constexpr size_t FileEntriesPerSector = (sizeof(sector)) / sizeof(FileEntry);
-
 /// <summary>
 /// Track18 has 19 sectors,
 /// first is the BAM (BlockAvailablityMap)
