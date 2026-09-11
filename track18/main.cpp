@@ -53,8 +53,8 @@ constexpr u8 inv3(u8 ft) {
 }
 
 std::string stringifyFileType(const FileEntry& dirInfo) {
-	const std::uint8_t& filebits = dirInfo.filetype;
-	const std::uint8_t inspect = inv3(filebits); //only looking at last3 bits
+	const u8& filebits = dirInfo.filetype;
+	const u8 inspect = inv3(filebits); //only looking at last3 bits
 	if (inspect == inv3((u8)FileTypes::DEL) ) { //8'0 DEL
 		return "DEL";
 	}
@@ -137,6 +137,7 @@ struct BAMSector {
 
 static_assert(sizeof(BAMSector) == 256); //sizeof(sector)
 constexpr size_t FileEntriesPerSector = (sizeof(sector)) / sizeof(FileEntry);
+
 /// <summary>
 /// Track18 has 19 sectors,
 /// first is the BAM (BlockAvailablityMap)
