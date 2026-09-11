@@ -15,5 +15,9 @@ http://unusedino.de/ec64/technical/formats/d64.html
 
 https://www.magicdisk64.com/images-magic-disk-64.html
 
+## aufruf
 
+track18.exe <basepath>
+
+will search basepath recursively for d64-files and show its contents.
 
